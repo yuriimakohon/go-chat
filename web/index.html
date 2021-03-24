@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Go-chat</title>
+</head>
+<body>
+<h2>GOCHAT</h2>
+<button type="button" id="new_msg" onclick="new_message()">New Message</button>
+
+<script>
+    let socket = new WebSocket("ws://localhost:8080/ws");
+    console.log("Attempting Connection...");
+
+    socket.onopen = () => {
+        console.log("Successfully Connected");
+        socket.send("Hi From the Client!");
+    };
+
+    socket.onclose = (ev) => {
+        console.log("Socket Closed Connection: ", ev);
+        socket.send("Client Closed!");
+    };
+
+    socket.onerror = (error) => {
+        console.log("Socket Error: ", error);
+    };
+
+    socket.onmessage = (ev) => {
+        console.log(ev.data);
+    }
+
+    function new_message() {
+        let content = prompt("Message: ");
+        socket.send(content)
+    }
+</script>
+</body>
+</html>
