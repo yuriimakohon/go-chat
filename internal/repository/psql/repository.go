@@ -4,7 +4,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/yuriimakohon/go-chat/internal/models/credentials"
 	"github.com/yuriimakohon/go-chat/internal/repository"
-	"golang.org/x/crypto/bcrypt"
 	"log"
 )
 import "database/sql"
@@ -23,14 +22,18 @@ func New() *Repository {
 }
 
 func (r *Repository) NewUser(creds credentials.Credentials) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(creds.Password), 8)
+	_, err := r.GetUserByLogin(creds.Login)
 	if err != nil {
-		return err
+		if err != repository.ErrUserNotFound {
+			return err
+		}
+	} else {
+		return repository.ErrUserAlreadyExists
 	}
 
 	_, err = r.db.Query("insert into users values ($1, $2)",
 		creds.Login,
-		string(hashedPassword))
+		creds.Password)
 	if err != nil {
 		return err
 	}
@@ -38,10 +41,10 @@ func (r *Repository) NewUser(creds credentials.Credentials) error {
 }
 
 func (r *Repository) GetUserByLogin(login string) (credentials.Credentials, error) {
-	result := r.db.QueryRow("select password from users where login=$1", login)
+	result := r.db.QueryRow("select * from users where login=$1", login)
 
 	storedCreds := credentials.Credentials{}
-	err := result.Scan(&storedCreds.Password)
+	err := result.Scan(&storedCreds.Login, &storedCreds.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return credentials.Credentials{}, repository.ErrUserNotFound

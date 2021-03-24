@@ -15,22 +15,26 @@ func New(repo repository.Repository) *Handler {
 	return &Handler{repo: repo}
 }
 
+func (h Handler) renderHTML(pathname string) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, pathname, nil)
+	}
+}
+
 func (h *Handler) SetupRoutes() http.Handler {
 	r := gin.Default()
 	r.LoadHTMLGlob(config.HTMLPath)
 
 	auth := r.Group("/auth")
 	{
-		auth.GET("signup", h.signupGetHandler)
+		auth.GET("signup", h.renderHTML(config.SignupPage))
 		auth.POST("signup", h.signupHandler)
 
-		auth.GET("login", h.loginGetHandler)
+		auth.GET("login", h.renderHTML(config.LoginPage))
 		auth.POST("login", h.loginHandler)
 	}
 
-	r.GET("/", h.authRequired(), func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, config.IndexPage, nil)
-	})
+	r.GET("/", h.authRequired(), h.renderHTML(config.IndexPage))
 	r.GET("/ws", h.wsHandler)
 
 	return r
