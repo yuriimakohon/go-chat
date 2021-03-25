@@ -4,23 +4,43 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <title>Log in</title>
 </head>
 <body>
 <h2>Log In</h2>
-<label>
-    Login
-    <input type="text">
-</label>
-<br>
-<label>
-    Password
-    <input type="password">
-</label>
-<br>
-<button type="button" id="log_in" onclick="">Log in</button>
+<form id="loginFrom">
+    <label for="login">Login</label>
+    <br>
+    <input type="text" id="login">
+    <br><br>
+    <label for="password">Password</label>
+    <br>
+    <input type="password" id="password">
+    <br><br>
+    <input type="button" value="Log in" onclick="sendCreds()">
+</form>
 <br>
 <a href="/auth/signup">Not registered?</a>
+
+<script>
+    function sendCreds() {
+        let loginVal = $("#login").val();
+        let passwordVal = $("#password").val();
+
+        let sendInfo = {
+            login: loginVal,
+            password: passwordVal
+        }
+        $.ajax({
+            url: "/auth/login",
+            type: "POST",
+            data: JSON.stringify(sendInfo),
+            dataType: 'json',
+            contentType: 'application/json',
+        });
+    }
+</script>
 
 </body>
 </html>

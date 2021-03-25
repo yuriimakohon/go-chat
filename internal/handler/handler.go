@@ -28,10 +28,10 @@ func (h *Handler) SetupRoutes() http.Handler {
 	auth := r.Group("/auth")
 	{
 		auth.GET("signup", h.renderHTML(config.SignupPage))
-		auth.POST("signup", h.signupHandler)
+		auth.POST("signup", h.signupHandler, h.renderToken)
 
 		auth.GET("login", h.renderHTML(config.LoginPage))
-		auth.POST("login", h.loginHandler)
+		auth.POST("login", h.loginHandler, h.renderToken)
 	}
 
 	r.GET("/", h.authRequired(), h.renderHTML(config.IndexPage))

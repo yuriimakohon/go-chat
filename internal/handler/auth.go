@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/yuriimakohon/go-chat/config"
 	"github.com/yuriimakohon/go-chat/internal/models/credentials"
@@ -40,7 +41,8 @@ func (h *Handler) signupHandler(ctx *gin.Context) {
 func (h *Handler) loginHandler(ctx *gin.Context) {
 	creds := credentials.Credentials{}
 	if json.NewDecoder(ctx.Request.Body).Decode(&creds) != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"message": "Credentials not in JSON format"})
 		return
 	}
 
@@ -60,15 +62,44 @@ func (h *Handler) loginHandler(ctx *gin.Context) {
 			gin.H{"message": "Wrong login or password"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "successful login"})
+}
+
+func (h *Handler) renderToken(ctx *gin.Context) {
+	tokenString, err := newToken()
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	ctx.SetCookie(
+		"token",
+		tokenString,
+		int(config.TokenMaxAge.Seconds()),
+		"", "", false, false)
 }
 
 func (h *Handler) authRequired() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		t := ctx.Query("t")
-		if t == "" {
+		tknStr, err := ctx.Cookie("token")
+		if err != nil {
 			ctx.Redirect(http.StatusFound, "/auth/login")
-			ctx.Abort()
+			return
+		}
+
+		tkn, err := jwt.Parse(tknStr, func(token *jwt.Token) (interface{}, error) {
+			return jwtSecret, nil
+		})
+		if err != nil {
+			log.Println("AUTH REQ: ", err)
+			if err == jwt.ErrSignatureInvalid {
+				ctx.Redirect(http.StatusFound, "/auth/login")
+				return
+			}
+			ctx.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+		if !tkn.Valid {
+			ctx.Redirect(http.StatusFound, "/auth/login")
+			return
 		}
 	}
 }
