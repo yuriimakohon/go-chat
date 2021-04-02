@@ -2,32 +2,41 @@ package main
 
 import (
 	"github.com/joho/godotenv"
-	conf "github.com/yuriimakohon/go-chat/config"
+	"github.com/spf13/viper"
+	conf "github.com/yuriimakohon/go-chat/configs"
 	"github.com/yuriimakohon/go-chat/internal/handler"
 	"github.com/yuriimakohon/go-chat/internal/repository"
-	"github.com/yuriimakohon/go-chat/internal/repository/psql"
+	"github.com/yuriimakohon/go-chat/internal/repository/postgres"
 	"github.com/yuriimakohon/go-chat/internal/server"
+	"github.com/yuriimakohon/go-chat/internal/service"
 	"log"
-	"os"
 )
 
 func main() {
+	if err := intiConfigs(); err != nil {
+		log.Fatal("config files wasn't load: ", err.Error())
+	}
 	if err := godotenv.Load(conf.EnvPath); err != nil {
-		log.Fatal("Config file wasn't load")
+		log.Fatal("environments vars file wasn't load: ", err.Error())
 	}
 
-	var repo repository.Repository
-	repo = psql.New()
-	if repo == nil {
-		log.Fatal("Repository was not created")
-	}
-
-	h := handler.New(repo)
-	s := new(server.Server)
-	err := s.Run(
-		os.Getenv("PORT"),
-		h.SetupRoutes())
+	db, err := postgres.NewDB()
 	if err != nil {
-		log.Fatalf("error occurred while running program http server: %s", err)
+		log.Fatal("error occurred while creating db: ", err.Error())
 	}
+
+	chatRepository := repository.NewRepository(postgres.NewAuthRepository(db))
+	chatService := service.NewService(chatRepository)
+	chatHandler := handler.NewHandler(chatService)
+
+	serv := new(server.Server)
+	if err := serv.Run(viper.GetString("port"), chatHandler.InitRoutes()); err != nil {
+		log.Fatal("error occurred while running server: ", err.Error())
+	}
+}
+
+func intiConfigs() error {
+	viper.AddConfigPath("configs")
+	viper.SetConfigName("config")
+	return viper.ReadInConfig()
 }

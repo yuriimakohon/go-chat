@@ -2,40 +2,50 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/yuriimakohon/go-chat/config"
-	"github.com/yuriimakohon/go-chat/internal/repository"
+	"github.com/yuriimakohon/go-chat/configs"
+	"github.com/yuriimakohon/go-chat/internal/service"
 	"net/http"
 )
 
 type Handler struct {
-	repo repository.Repository
+	service *service.Service
 }
 
-func New(repo repository.Repository) *Handler {
-	return &Handler{repo: repo}
+func NewHandler(service *service.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h Handler) renderHTML(pathname string) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, pathname, nil)
+func (h *Handler) renderHTML(pathname string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.HTML(http.StatusOK, pathname, nil)
 	}
 }
 
-func (h *Handler) SetupRoutes() http.Handler {
+func (h *Handler) InitRoutes() *gin.Engine {
 	r := gin.Default()
-	r.LoadHTMLGlob(config.HTMLPath)
+	r.LoadHTMLGlob(configs.HTMLPath)
 
 	auth := r.Group("/auth")
 	{
-		auth.GET("signup", h.renderHTML(config.SignupPage))
-		auth.POST("signup", h.signupHandler, h.renderToken)
+		auth.GET("/login", h.renderHTML(configs.LoginPage))
+		auth.GET("/signup", h.renderHTML(configs.SignupPage))
 
-		auth.GET("login", h.renderHTML(config.LoginPage))
-		auth.POST("login", h.loginHandler, h.renderToken)
+		auth.POST("/login", h.logIn, h.setTokenCookieMiddleware)
+		auth.POST("/signup", h.signUp, h.setTokenCookieMiddleware)
 	}
 
-	r.GET("/", h.authRequired(), h.renderHTML(config.IndexPage))
-	r.GET("/ws", h.wsHandler)
+	room := r.Group("room")
+	{
+		room.POST("/", h.createRoom)
+		room.POST("/:id/join", h.joinRoom)
+	}
+
+	msg := r.Group("/msg")
+	{
+		msg.POST("/:room_id", h.createMsg)
+	}
+
+	r.GET("/", h.authRequiredMiddleware, h.renderHTML(configs.IndexPage))
 
 	return r
 }

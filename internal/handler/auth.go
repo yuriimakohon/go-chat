@@ -1,105 +1,84 @@
 package handler
 
 import (
-	"encoding/json"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"github.com/yuriimakohon/go-chat/config"
-	"github.com/yuriimakohon/go-chat/internal/models/credentials"
-	"github.com/yuriimakohon/go-chat/internal/repository"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/yuriimakohon/go-chat/internal/models"
+	"github.com/yuriimakohon/go-chat/internal/service"
 	"log"
 	"net/http"
+	"os"
 )
 
-func (h *Handler) signupHandler(ctx *gin.Context) {
-	creds := credentials.Credentials{}
-	if json.NewDecoder(ctx.Request.Body).Decode(&creds) != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
+func (h *Handler) logIn(c *gin.Context) {
+	creds := models.Credentials{}
+	if err := c.ShouldBindJSON(&creds); err != nil {
+		newErrorResponse(c, http.StatusBadRequest, msgBadCredsFormat)
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(creds.Password), config.BcryptCost)
-	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-	creds.Password = string(hashedPassword)
-
-	if err = h.repo.NewUser(creds); err != nil {
-		if err == repository.ErrUserAlreadyExists {
-			ctx.AbortWithStatusJSON(http.StatusConflict,
-				gin.H{"message": "User already exists, choose another login"})
+	if err := h.service.LogIn(creds); err != nil {
+		if err == service.ErrWrongPassword || err == service.ErrUserDosentExists {
+			log.Printf("Wrong credentials: %v", err)
+			newErrorResponse(c, http.StatusBadRequest, msgBadCreds)
 			return
 		}
-		log.Println(err)
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 }
 
-func (h *Handler) loginHandler(ctx *gin.Context) {
-	creds := credentials.Credentials{}
-	if json.NewDecoder(ctx.Request.Body).Decode(&creds) != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest,
-			gin.H{"message": "Credentials not in JSON format"})
+func (h *Handler) signUp(c *gin.Context) {
+	creds := models.Credentials{}
+	if err := c.ShouldBindJSON(&creds); err != nil {
+		newErrorResponse(c, http.StatusBadRequest, msgBadCredsFormat)
 		return
 	}
 
-	storedCreds, err := h.repo.GetUserByLogin(creds.Login)
-	if err != nil {
-		if err == repository.ErrUserNotFound {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized,
-				gin.H{"message": "Wrong login or password"})
+	if err := h.service.SignUp(creds); err != nil {
+		if err == service.ErrUserAlreadyExists {
+			newErrorResponse(c, http.StatusConflict, msgUserAlreadyExists)
 			return
 		}
-		ctx.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	if bcrypt.CompareHashAndPassword([]byte(storedCreds.Password), []byte(creds.Password)) != nil {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized,
-			gin.H{"message": "Wrong login or password"})
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 }
 
-func (h *Handler) renderToken(ctx *gin.Context) {
-	tokenString, err := newToken()
+func (h *Handler) setTokenCookieMiddleware(c *gin.Context) {
+	token := jwt.New(jwt.SigningMethodHS256)
+	signedTokenStr, err := token.SignedString([]byte(os.Getenv("TOKEN_SIGN")))
 	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		log.Printf("setTokenCookieMiddleware: %s\n", err)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	ctx.SetCookie(
-		"token",
-		tokenString,
-		int(config.TokenMaxAge.Seconds()),
-		"", "", false, false)
+	c.SetCookie(
+		"token", signedTokenStr, 7,
+		"", "", false, false,
+	)
 }
 
-func (h *Handler) authRequired() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		tknStr, err := ctx.Cookie("token")
-		if err != nil {
-			ctx.Redirect(http.StatusFound, "/auth/login")
+func (h *Handler) authRequiredMiddleware(c *gin.Context) {
+	tokenStr, err := c.Cookie("token")
+	if err != nil {
+		c.Redirect(http.StatusFound, "/auth/login")
+		return
+	}
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("TOKEN_SIGN")), nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			c.Redirect(http.StatusFound, "/auth/login")
 			return
 		}
-
-		tkn, err := jwt.Parse(tknStr, func(token *jwt.Token) (interface{}, error) {
-			return jwtSecret, nil
-		})
-		if err != nil {
-			log.Println("AUTH REQ: ", err)
-			if err == jwt.ErrSignatureInvalid {
-				ctx.Redirect(http.StatusFound, "/auth/login")
-				return
-			}
-			ctx.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-		if !tkn.Valid {
-			ctx.Redirect(http.StatusFound, "/auth/login")
-			return
-		}
+		log.Printf("authRequiredMiddleware: %s\n", err)
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	if !token.Valid {
+		c.Redirect(http.StatusFound, "/auth/login")
+		return
 	}
 }
