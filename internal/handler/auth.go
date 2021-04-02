@@ -63,6 +63,7 @@ func (h *Handler) authRequiredMiddleware(c *gin.Context) {
 	tokenStr, err := c.Cookie("token")
 	if err != nil {
 		c.Redirect(http.StatusFound, "/auth/login")
+		c.Abort()
 		return
 	}
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
@@ -71,6 +72,7 @@ func (h *Handler) authRequiredMiddleware(c *gin.Context) {
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
 			c.Redirect(http.StatusFound, "/auth/login")
+			c.Abort()
 			return
 		}
 		log.Printf("authRequiredMiddleware: %s\n", err)
@@ -79,6 +81,7 @@ func (h *Handler) authRequiredMiddleware(c *gin.Context) {
 	}
 	if !token.Valid {
 		c.Redirect(http.StatusFound, "/auth/login")
+		c.Abort()
 		return
 	}
 }
