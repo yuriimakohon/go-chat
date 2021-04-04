@@ -46,7 +46,12 @@ func (h *Handler) createRoom(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	//h.joinRoom(c)
+
+	c.Params = append(c.Params, gin.Param{
+		Key:   "id",
+		Value: room.Id,
+	})
+	h.joinRoom(c)
 }
 
 func (h *Handler) getRooms(c *gin.Context) {
