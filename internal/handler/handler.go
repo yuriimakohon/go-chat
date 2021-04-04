@@ -35,9 +35,12 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	}
 
 	room := r.Group("room")
+	room.Use(h.authRequiredMiddleware, h.setTokenCookieMiddleware)
 	{
 		room.POST("/", h.createRoom)
-		room.POST("/:id/join", h.joinRoom)
+		room.GET("/", h.getRooms)
+		room.POST("/:id", h.joinRoom)
+		room.GET("/:id", h.connectRoom)
 	}
 
 	msg := r.Group("/msg")
@@ -45,7 +48,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		msg.POST("/:room_id", h.createMsg)
 	}
 
-	r.GET("/", h.authRequiredMiddleware, h.renderHTML(configs.IndexPage))
+	r.GET("/", h.authRequiredMiddleware, h.setTokenCookieMiddleware, h.renderHTML(configs.IndexPage))
 
 	return r
 }

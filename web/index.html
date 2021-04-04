@@ -1,16 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>Go-chat</title>
 </head>
 <body>
 <h2>GOCHAT</h2>
-<button type="button" id="new_msg" onclick="new_message()">New Message</button>
+<button type="button" id="new_room" onclick="newRoom()">Create</button>
+<input type="text" id="room_id" placeholder="Room id">
+<button type="button" id="join_room" onclick="joinRoom()">Join</button>
 
 <script>
+    // document.addEventListener("DOMContentLoaded", async function loadMyAuctions() {
+    //     let response = await fetch('http://localhost:8080/room' + localStorage.getItem('id'), {
+    //         method: 'GET',
+    //         credentials: "same-origin"
+    //     });
+    //     // if (response.ok) {
+    //     //     let json = await response.json();
+    //     //     auctionsGen(json);
+    //     // } else {
+    //     //     console.log(await response.json());
+    //     // }
+    // });
+
+    async function newRoom(login, password) {
+        let roomId = $("#room_id").val();
+        let params = {
+            id: roomId
+        };
+        let url = 'http://localhost:8080/room';
+
+        let response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(params)
+        });
+
+        if (response.ok) {
+            window.location.href = 'http://localhost:8080/room/join?id=' + roomId;
+        } else {
+            let msg = JSON.parse(await response.text()).message;
+            alert(msg);
+        }
+    }
+
+
+    function joinRoom() {
+        alert("Implement me: joinRoom()")
+    }
+
     // let socket = new WebSocket("ws://localhost:8080/ws");
     // console.log("Attempting Connection...");
     //

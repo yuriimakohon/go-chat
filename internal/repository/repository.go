@@ -10,6 +10,8 @@ type Authorization interface {
 }
 
 type Room interface {
+	CreateRoom(room models.Room) error
+	JoinRoom(login string, roomId string) error
 }
 
 type Message interface {
@@ -21,10 +23,10 @@ type Repository struct {
 	Message
 }
 
-func NewRepository(auth Authorization) *Repository {
+func NewRepository(auth Authorization, room Room) *Repository {
 	return &Repository{
 		Authorization: auth,
-		Room:          nil,
+		Room:          room,
 		Message:       nil,
 	}
 }

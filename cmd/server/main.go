@@ -25,7 +25,9 @@ func main() {
 		log.Fatal("error occurred while creating db: ", err.Error())
 	}
 
-	chatRepository := repository.NewRepository(postgres.NewAuthRepository(db))
+	chatRepository := repository.NewRepository(
+		postgres.NewAuthRepository(db),
+		postgres.NewRoomRepository(db))
 	chatService := service.NewService(chatRepository)
 	chatHandler := handler.NewHandler(chatService)
 
