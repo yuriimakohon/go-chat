@@ -18,27 +18,40 @@
     <br>
     <input type="password" id="password">
     <br><br>
-    <input type="button" value="Sign up" onclick="sendCreds()">
+    <input type="button" value="Sign up" onclick="onSignup()">
 </form>
 <br>
 <a href="/auth/login">Already registered?</a>
 
 <script>
-    function sendCreds() {
+    async function sign_up(login, password) {
+        let params = {
+            login: login,
+            password: password,
+        };
+        let url = 'http://localhost:8080/auth/signup';
+
+        let response = await fetch( url, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(params)
+        });
+
+        if (response.ok) {
+            window.location.href = "/";
+        } else {
+            let msg = JSON.parse(await response.text()).message;
+            alert(msg);
+        }
+    }
+
+    function onSignup() {
         let loginVal = $("#login").val();
         let passwordVal = $("#password").val();
 
-        let sendInfo = {
-            login: loginVal,
-            password: passwordVal
-        }
-        $.ajax({
-            url: "/auth/signup",
-            type: "POST",
-            data: JSON.stringify(sendInfo),
-            dataType: 'json',
-            contentType: 'application/json',
-        });
+        sign_up(loginVal, passwordVal)
     }
 </script>
 </body>
