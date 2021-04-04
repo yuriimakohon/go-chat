@@ -27,7 +27,7 @@ func (r *RoomService) JoinRoom(login string, roomId string) error {
 	if err := r.repo.JoinRoom(login, roomId); err != nil {
 		switch err {
 		case repository.ErrRoomDosentExists:
-			return ErrUserDosentExists
+			return ErrRoomDosentExists
 		case repository.ErrUserAlreadyInRoom:
 			return ErrUserAlreadyInRoom
 		default:
