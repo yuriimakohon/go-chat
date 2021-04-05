@@ -35,7 +35,7 @@ func (r RoomRepository) JoinRoom(login string, roomId string) error {
 	if exists, err := r.isRoomExists(roomId); err != nil {
 		return err
 	} else if !exists {
-		return repository.ErrRoomDosentExists
+		return repository.ErrRoomDoesntExists
 	}
 
 	err := r.db.QueryRow(

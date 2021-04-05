@@ -19,17 +19,22 @@ type Claims struct {
 func (h *Handler) logIn(c *gin.Context) {
 	creds := models.Credentials{}
 	if err := c.ShouldBindJSON(&creds); err != nil {
-		newErrorResponse(c, http.StatusBadRequest, msgBadCredsFormat)
+		newErrorResponse(c, http.StatusBadRequest, msgBadCredsJSONFormat)
 		return
 	}
 
 	if err := h.service.LogIn(creds); err != nil {
-		if err == service.ErrWrongPassword || err == service.ErrUserDosentExists {
-			log.Printf("Wrong credentials: %v", err)
-			newErrorResponse(c, http.StatusBadRequest, msgBadCreds)
-			return
+		switch err {
+		case service.ErrWrongPassword, service.ErrUserDoesntExists:
+			{
+				log.Printf("Wrong credentials: %v", err)
+				newErrorResponse(c, http.StatusBadRequest, msgBadCreds)
+			}
+		case service.ErrBadCredsFormat:
+			newErrorResponse(c, http.StatusBadRequest, msgBadCredsFormat)
+		default:
+			c.AbortWithStatus(http.StatusInternalServerError)
 		}
-		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
@@ -39,16 +44,19 @@ func (h *Handler) logIn(c *gin.Context) {
 func (h *Handler) signUp(c *gin.Context) {
 	creds := models.Credentials{}
 	if err := c.ShouldBindJSON(&creds); err != nil {
-		newErrorResponse(c, http.StatusBadRequest, msgBadCredsFormat)
+		newErrorResponse(c, http.StatusBadRequest, msgBadCredsJSONFormat)
 		return
 	}
 
 	if err := h.service.SignUp(creds); err != nil {
-		if err == service.ErrUserAlreadyExists {
+		switch err {
+		case service.ErrUserAlreadyExists:
 			newErrorResponse(c, http.StatusConflict, msgUserAlreadyExists)
-			return
+		case service.ErrBadCredsFormat:
+			newErrorResponse(c, http.StatusConflict, msgBadCredsFormat)
+		default:
+			c.AbortWithStatus(http.StatusInternalServerError)
 		}
-		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 

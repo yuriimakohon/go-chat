@@ -6,6 +6,7 @@ import (
 	"github.com/yuriimakohon/go-chat/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 	"log"
+	"regexp"
 )
 
 type AuthService struct {
@@ -17,6 +18,10 @@ func NewAuthService(repo repository.Authorization) *AuthService {
 }
 
 func (s *AuthService) SignUp(creds models.Credentials) error {
+	if !isValidCredsFormat(creds) {
+		return ErrBadCredsFormat
+	}
+
 	hashedPassword, err := generatePasswordHash([]byte(creds.Password))
 	if err != nil {
 		return err
@@ -34,10 +39,14 @@ func (s *AuthService) SignUp(creds models.Credentials) error {
 }
 
 func (s *AuthService) LogIn(creds models.Credentials) error {
+	if !isValidCredsFormat(creds) {
+		return ErrBadCredsFormat
+	}
+
 	storedCreds, err := s.repo.GetUser(creds.Login)
 	if err != nil {
 		if err == repository.ErrUserDoesntExists {
-			return ErrUserDosentExists
+			return ErrUserDoesntExists
 		}
 		log.Printf("service-auth: %s\n", err)
 		return err
@@ -63,4 +72,17 @@ func generatePasswordHash(password []byte) ([]byte, error) {
 		return nil, err
 	}
 	return hashedPassword, nil
+}
+
+var (
+	loginRegexp = regexp.MustCompile("^[A-Za-z0-9_-]{3,30}$")
+	passRegexp  = regexp.MustCompile("^[A-Za-z0-9_-]{5,255}$")
+)
+
+func isValidCredsFormat(creds models.Credentials) bool {
+	if !loginRegexp.MatchString(creds.Login) ||
+		!passRegexp.MatchString(creds.Password) {
+		return false
+	}
+	return true
 }

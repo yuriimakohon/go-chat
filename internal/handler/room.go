@@ -20,8 +20,8 @@ func (h *Handler) joinRoom(c *gin.Context) {
 
 	if err := h.service.JoinRoom(login, roomId); err != nil {
 		switch err {
-		case service.ErrRoomDosentExists:
-			newErrorResponse(c, http.StatusNotFound, msgRoomDosentExists)
+		case service.ErrRoomDoesntExists:
+			newErrorResponse(c, http.StatusNotFound, msgRoomDoesntExists)
 		case service.ErrUserAlreadyInRoom:
 			newErrorResponse(c, http.StatusConflict, msgUserAlreadyInRoom)
 		default:

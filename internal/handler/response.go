@@ -5,14 +5,15 @@ import (
 )
 
 var (
-	msgBadCredsFormat    = "invalid credentials format"
-	msgBadCreds          = "wrong login or password"
-	msgUserAlreadyExists = "user already exists"
-	msgUserDosentExists  = "user dosen't exists"
+	msgBadCredsFormat     = "invalid credentials format"
+	msgBadCredsJSONFormat = "invalid credentials JSON-format"
+	msgBadCreds           = "wrong login or password"
+	msgUserAlreadyExists  = "user already exists"
+	msgUserDoesntExists   = "user doesn't exists"
 
 	msgBadRoomFormat     = "invalid room info format"
 	msgRoomAlreadyExists = "room already exists"
-	msgRoomDosentExists  = "room dosen't exists"
+	msgRoomDoesntExists  = "room doesn't exists"
 	msgUserAlreadyInRoom = "user already in the room"
 )
 
